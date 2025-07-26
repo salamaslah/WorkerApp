@@ -117,30 +117,28 @@ class ConstructionAPITester:
         return False
         
     def test_create_project(self):
-        """Test project creation endpoint"""
+        """Test project creation endpoint with new structure"""
         print("\n=== Testing Project Creation ===")
         
         project_data = {
             "name": "مشروع بناء مجمع سكني - حي الزهراء",
             "type": "building",
-            "description": "بناء مجمع سكني يتكون من 4 طوابق مع 16 شقة سكنية",
-            "location": "رام الله - حي الزهراء",
-            "address": "شارع الملك فيصل، مقابل مسجد النور",
+            "work_sections": [
+                {"name": "حفر الأساسات", "percentage": 15.0},
+                {"name": "صب الأساسات", "percentage": 20.0},
+                {"name": "بناء الجدران", "percentage": 35.0},
+                {"name": "أعمال السقف", "percentage": 30.0}
+            ],
+            "floors_count": 4,
+            "address": "شارع الملك فيصل، مقابل مسجد النور، رام الله - حي الزهراء",
             "contact_phone1": "+972-59-876-5432",
             "contact_phone2": "+972-2-234-5678",
             "total_amount": 850000.0,
             "building_config": {
-                "floors": 4,
                 "apartments_per_floor": 4,
                 "total_apartments": 16,
                 "building_area": 1200
-            },
-            "work_steps": [
-                {"step": "حفر الأساسات", "status": "completed", "cost": 45000},
-                {"step": "صب الأساسات", "status": "in_progress", "cost": 65000},
-                {"step": "بناء الجدران", "status": "pending", "cost": 180000},
-                {"step": "أعمال السقف", "status": "pending", "cost": 120000}
-            ]
+            }
         }
         
         response = self.make_request("POST", "/projects", project_data)
