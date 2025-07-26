@@ -61,13 +61,17 @@ class UserLogin(BaseModel):
     username_or_email: str
     password: str
 
+class WorkSection(BaseModel):
+    name: str
+    percentage: float  # Percentage of total work this section represents
+
 class Project(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     name: str
     type: str  # "building" or "street"
-    description: str
-    location: str
+    work_sections: List[WorkSection] = []  # Sections of work with percentages
+    floors_count: int  # Number of floors
     address: str
     contact_phone1: str
     contact_phone2: Optional[str] = None
@@ -75,22 +79,20 @@ class Project(BaseModel):
     progress_percentage: float = 0.0
     building_config: Optional[dict] = None  # For building projects
     street_config: Optional[dict] = None    # For street projects
-    work_steps: List[dict] = []
     status: str = "active"  # "active", "completed", "cancelled"
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class ProjectCreate(BaseModel):
     name: str
     type: str
-    description: str
-    location: str
+    work_sections: List[WorkSection] = []
+    floors_count: int
     address: str
     contact_phone1: str
     contact_phone2: Optional[str] = None
     total_amount: float
     building_config: Optional[dict] = None
     street_config: Optional[dict] = None
-    work_steps: List[dict] = []
 
 class Worker(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
