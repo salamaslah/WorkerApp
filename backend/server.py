@@ -320,11 +320,38 @@ async def get_workdays(current_user: dict = Depends(get_current_user)):
 
 # Reports routes
 @api_router.get("/reports/financial")
-async def get_financial_report(current_user: dict = Depends(get_current_user)):
-    # Get all expenses, incomes, and calculate worker payments
-    expenses = await db.expenses.find({"user_id": current_user["id"]}).to_list(1000)
-    incomes = await db.incomes.find({"user_id": current_user["id"]}).to_list(1000)
-    workdays = await db.workdays.find({"user_id": current_user["id"]}).to_list(1000)
+async def get_financial_report(
+    period: Optional[str] = None,  # "monthly", "yearly", or None for all time
+    project_id: Optional[str] = None,  # Filter by specific project
+    current_user: dict = Depends(get_current_user)
+):
+    # Build date filter
+    date_filter = {}
+    if period == "monthly":
+        # Current month
+        now = datetime.utcnow()
+        start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        date_filter = {"date": {"$gte": start_date}}
+    elif period == "yearly":
+        # Current year
+        now = datetime.utcnow()
+        start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        date_filter = {"date": {"$gte": start_date}}
+    
+    # Build project filter
+    project_filter = {}
+    if project_id:
+        project_filter = {"project_id": project_id}
+    
+    # Combine filters
+    expense_filter = {"user_id": current_user["id"], **date_filter, **project_filter}
+    income_filter = {"user_id": current_user["id"], **date_filter, **project_filter}
+    workday_filter = {"user_id": current_user["id"], **date_filter, **project_filter}
+    
+    # Get filtered data
+    expenses = await db.expenses.find(expense_filter).to_list(1000)
+    incomes = await db.incomes.find(income_filter).to_list(1000)
+    workdays = await db.workdays.find(workday_filter).to_list(1000)
     workers = await db.workers.find({"user_id": current_user["id"]}).to_list(1000)
     
     total_expenses = sum(expense["amount"] for expense in expenses)
@@ -345,8 +372,73 @@ async def get_financial_report(current_user: dict = Depends(get_current_user)):
         "total_incomes": total_incomes,
         "total_expenses": total_expenses,
         "worker_payments": worker_payments,
-        "profit": profit
+        "profit": profit,
+        "period": period,
+        "project_id": project_id
     }
+
+@api_router.get("/reports/projects")
+async def get_projects_financial_summary(current_user: dict = Depends(get_current_user)):
+    """Get financial summary for each project"""
+    projects = await db.projects.find({"user_id": current_user["id"]}).to_list(1000)
+    
+    project_summaries = []
+    for project in projects:
+        # Get expenses for this project
+        project_expenses = await db.expenses.find({
+            "user_id": current_user["id"],
+            "project_id": project["id"]
+        }).to_list(1000)
+        
+        # Get incomes for this project
+        project_incomes = await db.incomes.find({
+            "user_id": current_user["id"],
+            "project_id": project["id"]
+        }).to_list(1000)
+        
+        # Get workdays for this project
+        project_workdays = await db.workdays.find({
+            "user_id": current_user["id"],
+            "project_id": project["id"]
+        }).to_list(1000)
+        
+        # Calculate worker payments for this project
+        workers = await db.workers.find({"user_id": current_user["id"]}).to_list(1000)
+        worker_payments = 0
+        for workday in project_workdays:
+            for worker_id in workday["workers"]:
+                worker = next((w for w in workers if w["id"] == worker_id), None)
+                if worker:
+                    if worker["payment_type"] == "daily":
+                        worker_payments += worker["payment_amount"]
+        
+        total_expenses = sum(expense["amount"] for expense in project_expenses)
+        total_incomes = sum(income["amount_before_tax"] for income in project_incomes)
+        profit = total_incomes - total_expenses - worker_payments
+        
+        # Calculate progress based on work sections
+        total_work_done = 0
+        if project.get("work_sections"):
+            for workday in project_workdays:
+                section_name = workday.get("work_section", "")
+                section = next((s for s in project["work_sections"] if s["name"] == section_name), None)
+                if section:
+                    # Simple progress calculation
+                    total_work_done += (workday.get("work_percentage", 0) * section["percentage"] / 100)
+        
+        project_summaries.append({
+            "project_id": project["id"],
+            "project_name": project["name"],
+            "total_amount": project["total_amount"],
+            "total_expenses": total_expenses,
+            "total_incomes": total_incomes,
+            "worker_payments": worker_payments,
+            "profit": profit,
+            "progress_percentage": min(total_work_done, 100),  # Cap at 100%
+            "status": project["status"]
+        })
+    
+    return project_summaries
 
 # Include the router in the main app
 app.include_router(api_router)
