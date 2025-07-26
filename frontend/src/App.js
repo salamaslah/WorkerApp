@@ -429,7 +429,8 @@ const Dashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">ملخص المشاريع المالي</h3>
               <div className="space-y-4">
                 {projectsFinancial.map(project => (
-                  <div key={project.project_id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={project.project_id} className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:bg-gray-50"
+                       onClick={() => setCurrentView(`project-details-${project.project_id}`)}>
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-medium text-gray-900">{project.project_name}</h4>
                       <span className={`text-sm px-2 py-1 rounded ${
@@ -463,6 +464,7 @@ const Dashboard = () => {
                     </div>
                     <div className="mt-2 flex justify-between items-center">
                       <span className="text-sm text-gray-500">التقدم: {project.progress_percentage.toFixed(1)}%</span>
+                      <span className="text-sm text-blue-600">انقر لعرض التفاصيل</span>
                     </div>
                     <div className="mt-2 bg-gray-200 rounded-full h-2">
                       <div 
@@ -487,6 +489,14 @@ const Dashboard = () => {
       case 'workdays':
         return <WorkDayManagement projects={projects} />;
       default:
+        // Check if it's a project details view
+        if (currentView.startsWith('project-details-')) {
+          const projectId = currentView.replace('project-details-', '');
+          const project = projects.find(p => p.id === projectId);
+          if (project) {
+            return <ProjectDetailsView project={project} onBack={() => setCurrentView('dashboard')} />;
+          }
+        }
         return null;
     }
   };
