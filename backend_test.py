@@ -586,6 +586,8 @@ class ConstructionAPITester:
         
         # Reporting tests
         self.test_financial_report()
+        self.test_financial_report_with_filters()
+        self.test_projects_financial_summary()
         
         # Print summary
         self.print_summary()
