@@ -294,10 +294,14 @@ const Dashboard = () => {
   const [projects, setProjects] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
   const [financialReport, setFinancialReport] = useState(null);
+  const [projectsFinancial, setProjectsFinancial] = useState([]);
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
+  const [selectedProject, setSelectedProject] = useState('all');
 
   useEffect(() => {
     fetchProjects();
     fetchFinancialReport();
+    fetchProjectsFinancial();
   }, []);
 
   const fetchProjects = async () => {
@@ -309,13 +313,38 @@ const Dashboard = () => {
     }
   };
 
-  const fetchFinancialReport = async () => {
+  const fetchFinancialReport = async (period = null, projectId = null) => {
     try {
-      const response = await axios.get(`${API}/reports/financial`);
+      let url = `${API}/reports/financial`;
+      const params = [];
+      if (period && period !== 'all') params.push(`period=${period}`);
+      if (projectId && projectId !== 'all') params.push(`project_id=${projectId}`);
+      if (params.length > 0) url += `?${params.join('&')}`;
+      
+      const response = await axios.get(url);
       setFinancialReport(response.data);
     } catch (error) {
       console.error('Error fetching financial report:', error);
     }
+  };
+
+  const fetchProjectsFinancial = async () => {
+    try {
+      const response = await axios.get(`${API}/reports/projects`);
+      setProjectsFinancial(response.data);
+    } catch (error) {
+      console.error('Error fetching projects financial:', error);
+    }
+  };
+
+  const handlePeriodChange = (period) => {
+    setSelectedPeriod(period);
+    fetchFinancialReport(period === 'all' ? null : period, selectedProject === 'all' ? null : selectedProject);
+  };
+
+  const handleProjectChange = (projectId) => {
+    setSelectedProject(projectId);
+    fetchFinancialReport(selectedPeriod === 'all' ? null : selectedPeriod, projectId === 'all' ? null : projectId);
   };
 
   const MenuItem = ({ title, onClick, icon, isActive }) => (
@@ -337,7 +366,40 @@ const Dashboard = () => {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Financial Filter Controls */}
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">فلترة التقارير المالية</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الفترة الزمنية</label>
+                  <select
+                    value={selectedPeriod}
+                    onChange={(e) => handlePeriodChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">جميع الفترات</option>
+                    <option value="monthly">الشهر الحالي</option>
+                    <option value="yearly">السنة الحالية</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">المشروع</label>
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => handleProjectChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">جميع المشاريع</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>{project.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">عدد المشاريع النشطة</h3>
                 <p className="text-3xl font-bold text-blue-600">{projects.filter(p => p.status === 'active').length}</p>
@@ -349,6 +411,12 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">إجمالي المصروفات</h3>
+                <p className="text-3xl font-bold text-red-600">
+                  {financialReport ? `₪${financialReport.total_expenses.toLocaleString()}` : 'جاري التحميل...'}
+                </p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">الأرباح الصافية</h3>
                 <p className="text-3xl font-bold text-purple-600">
                   {financialReport ? `₪${financialReport.profit.toLocaleString()}` : 'جاري التحميل...'}
@@ -356,19 +424,45 @@ const Dashboard = () => {
               </div>
             </div>
             
+            {/* Projects Financial Summary */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">المشاريع الحالية</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">ملخص المشاريع المالي</h3>
               <div className="space-y-4">
-                {projects.filter(p => p.status === 'active').map(project => (
-                  <div key={project.id} className="border border-gray-200 rounded-lg p-4">
+                {projectsFinancial.map(project => (
+                  <div key={project.project_id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-gray-900">{project.name}</h4>
-                      <span className="text-sm text-gray-500">{project.type === 'building' ? 'بناء' : 'شارع'}</span>
+                      <h4 className="font-medium text-gray-900">{project.project_name}</h4>
+                      <span className={`text-sm px-2 py-1 rounded ${
+                        project.status === 'active' ? 'bg-green-100 text-green-800' : 
+                        project.status === 'completed' ? 'bg-blue-100 text-blue-800' : 
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {project.status === 'active' ? 'نشط' : 
+                         project.status === 'completed' ? 'مكتمل' : 'ملغي'}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{project.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">التقدم: {project.progress_percentage}%</span>
-                      <span className="text-sm font-medium text-blue-600">₪{project.total_amount.toLocaleString()}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">المبلغ الإجمالي:</span>
+                        <span className="text-blue-600 ml-2">₪{project.total_amount.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">المدخولات:</span>
+                        <span className="text-green-600 ml-2">₪{project.total_incomes.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">المصروفات:</span>
+                        <span className="text-red-600 ml-2">₪{project.total_expenses.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">الربح:</span>
+                        <span className={`ml-2 ${project.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₪{project.profit.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex justify-between items-center">
+                      <span className="text-sm text-gray-500">التقدم: {project.progress_percentage.toFixed(1)}%</span>
                     </div>
                     <div className="mt-2 bg-gray-200 rounded-full h-2">
                       <div 
@@ -391,7 +485,7 @@ const Dashboard = () => {
       case 'incomes':
         return <IncomeManagement />;
       case 'workdays':
-        return <WorkDayManagement />;
+        return <WorkDayManagement projects={projects} />;
       default:
         return null;
     }
