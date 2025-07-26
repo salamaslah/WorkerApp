@@ -1545,7 +1545,200 @@ const IncomeManagement = () => {
   );
 };
 
-// Work Day Management Component
+// Project Details View Component
+const ProjectDetailsView = ({ project, onBack }) => {
+  const [workdays, setWorkdays] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProjectWorkdays();
+    fetchWorkers();
+  }, [project.id]);
+
+  const fetchProjectWorkdays = async () => {
+    try {
+      const response = await axios.get(`${API}/workdays/project/${project.id}`);
+      setWorkdays(response.data);
+    } catch (error) {
+      console.error('Error fetching project workdays:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchWorkers = async () => {
+    try {
+      const response = await axios.get(`${API}/workers`);
+      setWorkers(response.data);
+    } catch (error) {
+      console.error('Error fetching workers:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onBack}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+          >
+            ← العودة
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">تفاصيل المشروع</h2>
+        </div>
+      </div>
+
+      {/* Project Info */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{project.name}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <span className="font-medium text-gray-700">نوع المشروع:</span>
+            <span className="text-gray-600 ml-2">{project.type === 'building' ? 'بناء' : 'شارع'}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">
+              {project.type === 'building' ? 'عدد الطبقات:' : 'عدد الأمتار:'}
+            </span>
+            <span className="text-gray-600 ml-2">
+              {project.type === 'building' ? project.floors_count : project.street_length}
+            </span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">العنوان:</span>
+            <span className="text-gray-600 ml-2">{project.address}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">الهاتف:</span>
+            <span className="text-gray-600 ml-2">{project.contact_phone1}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">المبلغ الإجمالي:</span>
+            <span className="text-blue-600 ml-2">₪{project.total_amount.toLocaleString()}</span>
+          </div>
+          <div>
+            <span className="font-medium text-gray-700">التقدم:</span>
+            <span className="text-green-600 ml-2">{project.progress_percentage}%</span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mt-4 bg-gray-200 rounded-full h-3">
+          <div 
+            className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
+            style={{ width: `${project.progress_percentage}%` }}
+          ></div>
+        </div>
+
+        {/* Work Sections */}
+        {project.work_sections && project.work_sections.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-md font-medium text-gray-700 mb-3">أقسام العمل:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {project.work_sections.map((section, index) => (
+                <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                  <span className="text-sm text-gray-700">{section.name}</span>
+                  <span className="text-sm font-medium text-blue-600">{section.percentage}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Work Additions */}
+        {project.work_additions && project.work_additions.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-md font-medium text-gray-700 mb-3">إضافات العمل:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {project.work_additions.map((addition, index) => (
+                <div key={index} className="flex justify-between items-center bg-purple-50 p-3 rounded">
+                  <span className="text-sm text-gray-700">{addition.name}</span>
+                  <span className="text-sm font-medium text-purple-600">{addition.percentage}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Work Days */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">أيام العمل في هذا المشروع</h3>
+        
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">جاري تحميل أيام العمل...</p>
+          </div>
+        ) : workdays.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">لا توجد أيام عمل مسجلة لهذا المشروع بعد</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {workdays.map(workday => (
+              <div key={workday.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {workday.work_section} - {workday.work_area}
+                    </h4>
+                    {workday.floor_number && (
+                      <p className="text-sm text-gray-600">الطبقة {workday.floor_number}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-green-600">
+                      {workday.work_percentage}% مكتمل
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {workday.work_date}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="text-sm font-medium text-gray-700 mb-2">العمال:</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {workday.workers.map(workerId => {
+                        const worker = workers.find(w => w.id === workerId);
+                        return worker ? (
+                          <span key={workerId} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            {worker.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    {workday.vehicle_used && (
+                      <div className="mb-2">
+                        <h5 className="text-sm font-medium text-gray-700">السيارة المستخدمة:</h5>
+                        <p className="text-sm text-gray-600">{workday.vehicle_used}</p>
+                      </div>
+                    )}
+                    
+                    {workday.notes && (
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-700">الملاحظات:</h5>
+                        <p className="text-sm text-gray-600">{workday.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 const WorkDayManagement = ({ projects }) => {
   const [workdays, setWorkdays] = useState([]);
   const [workers, setWorkers] = useState([]);
