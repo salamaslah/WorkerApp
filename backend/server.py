@@ -172,6 +172,7 @@ class WorkDayCreate(BaseModel):
     workers: List[str]
     vehicle_used: Optional[str] = None
     notes: Optional[str] = None
+    work_date: Optional[str] = None  # Date in YYYY-MM-DD format
 
 # Utility functions
 def hash_password(password: str) -> str:
