@@ -455,9 +455,11 @@ class ConstructionAPITester:
             self.log_test("Workday Creation", False, "Missing project ID or worker ID")
             return False
             
+        # Test workday for building project (with floor_number)
         workday_data = {
             "project_id": self.project_id,
             "work_section": "بناء الجدران",
+            "work_area": "الطابق الثاني - الغرفة الرئيسية",
             "floor_number": 2,
             "work_percentage": 25.0,
             "workers": [self.worker_id],
@@ -469,16 +471,94 @@ class ConstructionAPITester:
         
         if response and response.status_code == 200:
             data = response.json()
-            if "id" in data and "work_section" in data and "floor_number" in data:
-                self.log_test("Workday Creation", True, f"Section: {data['work_section']}, Floor: {data['floor_number']}")
-                return True
+            if "id" in data and "work_section" in data and "work_area" in data and "floor_number" in data:
+                self.log_test("Workday Creation (Building)", True, f"Section: {data['work_section']}, Area: {data['work_area']}, Floor: {data['floor_number']}")
             else:
-                self.log_test("Workday Creation", False, "Missing workday data in response")
+                self.log_test("Workday Creation (Building)", False, "Missing workday data in response")
+                return False
         else:
             error_msg = response.text if response else "No response"
-            self.log_test("Workday Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            self.log_test("Workday Creation (Building)", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            return False
         
-        return False
+        return True
+        
+    def test_create_street_project_and_workday(self):
+        """Test creating street project and workday without floor_number"""
+        print("\n=== Testing Street Project and Workday ===")
+        
+        # Create street project
+        street_project_data = {
+            "name": "مشروع ترصيف شارع الملك فهد",
+            "type": "street",
+            "work_sections": [
+                {"name": "حفر الطريق", "percentage": 20.0},
+                {"name": "وضع الأساس", "percentage": 30.0},
+                {"name": "الترصيف", "percentage": 40.0},
+                {"name": "الخطوط والإشارات", "percentage": 10.0}
+            ],
+            "work_additions": [
+                {"name": "أرصفة جانبية", "percentage": 15.0},
+                {"name": "إنارة الشارع", "percentage": 10.0}
+            ],
+            "street_length": 2500.5,
+            "address": "شارع الملك فهد، من دوار المنارة إلى دوار الساعة، رام الله",
+            "contact_phone1": "+972-59-111-2222",
+            "contact_phone2": "+972-2-333-4444",
+            "total_amount": 450000.0,
+            "street_config": {
+                "width": 12.0,
+                "lanes": 4,
+                "sidewalk_width": 2.5
+            }
+        }
+        
+        response = self.make_request("POST", "/projects", street_project_data)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if "id" in data and data["type"] == "street" and "street_length" in data:
+                street_project_id = data["id"]
+                self.log_test("Street Project Creation", True, f"Street length: {data['street_length']}m")
+                
+                # Test workday for street project (without floor_number)
+                street_workday_data = {
+                    "project_id": street_project_id,
+                    "work_section": "الترصيف",
+                    "work_area": "من الكيلومتر 1 إلى الكيلومتر 1.5",
+                    "work_percentage": 30.0,
+                    "workers": [self.worker_id],
+                    "vehicle_used": "آلة الترصيف",
+                    "notes": "تم ترصيف 500 متر من الشارع"
+                }
+                
+                response = self.make_request("POST", "/workdays", street_workday_data)
+                
+                if response and response.status_code == 200:
+                    data = response.json()
+                    if "id" in data and "work_section" in data and "work_area" in data:
+                        # Verify floor_number is None or not present for street projects
+                        floor_number = data.get("floor_number")
+                        if floor_number is None:
+                            self.log_test("Street Workday Creation", True, f"Section: {data['work_section']}, Area: {data['work_area']}, No floor number")
+                            return True
+                        else:
+                            self.log_test("Street Workday Creation", False, f"Street workday should not have floor_number, got: {floor_number}")
+                            return False
+                    else:
+                        self.log_test("Street Workday Creation", False, "Missing workday data in response")
+                        return False
+                else:
+                    error_msg = response.text if response else "No response"
+                    self.log_test("Street Workday Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+                    return False
+            else:
+                self.log_test("Street Project Creation", False, "Missing street project data in response")
+                return False
+        else:
+            error_msg = response.text if response else "No response"
+            self.log_test("Street Project Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            return False
         
     def test_get_workdays(self):
         """Test getting user's workdays"""
