@@ -200,7 +200,7 @@ class ConstructionAPITester:
         return False
         
     def test_update_project(self):
-        """Test updating a project"""
+        """Test updating a project with new structure"""
         print("\n=== Testing Update Project ===")
         
         if not self.project_id:
@@ -210,24 +210,23 @@ class ConstructionAPITester:
         update_data = {
             "name": "مشروع بناء مجمع سكني - حي الزهراء (محدث)",
             "type": "building",
-            "description": "بناء مجمع سكني يتكون من 4 طوابق مع 16 شقة سكنية - تم التحديث",
-            "location": "رام الله - حي الزهراء",
-            "address": "شارع الملك فيصل، مقابل مسجد النور",
+            "work_sections": [
+                {"name": "حفر الأساسات", "percentage": 15.0},
+                {"name": "صب الأساسات", "percentage": 20.0},
+                {"name": "بناء الجدران", "percentage": 35.0},
+                {"name": "أعمال السقف", "percentage": 25.0},
+                {"name": "التشطيبات النهائية", "percentage": 5.0}
+            ],
+            "floors_count": 5,
+            "address": "شارع الملك فيصل، مقابل مسجد النور، رام الله - حي الزهراء",
             "contact_phone1": "+972-59-876-5432",
             "contact_phone2": "+972-2-234-5678",
-            "total_amount": 900000.0,
+            "total_amount": 950000.0,
             "building_config": {
-                "floors": 4,
                 "apartments_per_floor": 4,
-                "total_apartments": 16,
-                "building_area": 1200
-            },
-            "work_steps": [
-                {"step": "حفر الأساسات", "status": "completed", "cost": 45000},
-                {"step": "صب الأساسات", "status": "completed", "cost": 65000},
-                {"step": "بناء الجدران", "status": "in_progress", "cost": 180000},
-                {"step": "أعمال السقف", "status": "pending", "cost": 120000}
-            ]
+                "total_apartments": 20,
+                "building_area": 1500
+            }
         }
         
         response = self.make_request("PUT", f"/projects/{self.project_id}", update_data)
