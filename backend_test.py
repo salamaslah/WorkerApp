@@ -124,40 +124,64 @@ class ConstructionAPITester:
         """Test project creation endpoint with new structure"""
         print("\n=== Testing Project Creation ===")
         
+        # Test building project with work_sections and work_additions
         project_data = {
-            "name": "مشروع بناء مجمع سكني - حي الزهراء",
+            "name": "مشروع بناء فيلا سكنية",
             "type": "building",
             "work_sections": [
                 {"name": "حفر الأساسات", "percentage": 15.0},
                 {"name": "صب الأساسات", "percentage": 20.0},
                 {"name": "بناء الجدران", "percentage": 35.0},
-                {"name": "أعمال السقف", "percentage": 30.0}
+                {"name": "أعمال السقف", "percentage": 20.0}
             ],
-            "floors_count": 4,
+            "work_additions": [
+                {"name": "أسوار", "percentage": 5.0},
+                {"name": "طبقات سفلية", "percentage": 3.0},
+                {"name": "أسقف إضافية", "percentage": 2.0}
+            ],
+            "floors_count": 3,
             "address": "شارع الملك فيصل، مقابل مسجد النور، رام الله - حي الزهراء",
             "contact_phone1": "+972-59-876-5432",
             "contact_phone2": "+972-2-234-5678",
             "total_amount": 850000.0,
             "building_config": {
-                "apartments_per_floor": 4,
-                "total_apartments": 16,
-                "building_area": 1200
+                "apartments_per_floor": 2,
+                "total_apartments": 6,
+                "building_area": 800
             }
         }
+        
+        # Verify total percentage equals 100%
+        total_sections = sum(section["percentage"] for section in project_data["work_sections"])
+        total_additions = sum(addition["percentage"] for addition in project_data["work_additions"])
+        total_percentage = total_sections + total_additions
+        
+        if abs(total_percentage - 100.0) > 0.01:
+            self.log_test("Project Percentage Validation", False, f"Total percentage should be 100%, got {total_percentage}%")
+            return False
+        else:
+            self.log_test("Project Percentage Validation", True, f"Total percentage: {total_percentage}%")
         
         response = self.make_request("POST", "/projects", project_data)
         
         if response and response.status_code == 200:
             data = response.json()
-            if "id" in data:
+            if "id" in data and "work_sections" in data and "work_additions" in data and "floors_count" in data:
                 self.project_id = data["id"]
-                self.log_test("Project Creation", True, f"Project ID: {self.project_id}")
-                return True
+                self.log_test("Building Project Creation", True, f"Project ID: {self.project_id}, Floors: {data['floors_count']}")
+                
+                # Verify work_sections and work_additions are preserved
+                if len(data["work_sections"]) == 4 and len(data["work_additions"]) == 3:
+                    self.log_test("Project Structure Validation", True, f"Sections: {len(data['work_sections'])}, Additions: {len(data['work_additions'])}")
+                    return True
+                else:
+                    self.log_test("Project Structure Validation", False, f"Expected 4 sections and 3 additions, got {len(data['work_sections'])} and {len(data['work_additions'])}")
+                    return False
             else:
-                self.log_test("Project Creation", False, "Missing project ID in response")
+                self.log_test("Building Project Creation", False, "Missing project data in response")
         else:
             error_msg = response.text if response else "No response"
-            self.log_test("Project Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            self.log_test("Building Project Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
         
         return False
         
