@@ -340,16 +340,18 @@ class ConstructionAPITester:
         return False
         
     def test_create_income(self):
-        """Test income creation endpoint"""
+        """Test income creation endpoint with new tax structure"""
         print("\n=== Testing Income Creation ===")
         
         if not self.project_id:
             self.log_test("Income Creation", False, "No project ID available")
             return False
             
+        # Test with 17% tax
         income_data = {
             "project_id": self.project_id,
-            "amount_before_tax": 25000.0,
+            "amount_with_tax": 29250.0,  # Amount including 17% tax
+            "tax_percentage": 17.0,
             "description": "دفعة أولى من العميل لمشروع البناء"
         }
         
@@ -357,16 +359,74 @@ class ConstructionAPITester:
         
         if response and response.status_code == 200:
             data = response.json()
-            if "id" in data and "amount_before_tax" in data:
-                self.log_test("Income Creation", True, f"Income amount: {data['amount_before_tax']}")
-                return True
+            if "id" in data and "amount_before_tax" in data and "amount_with_tax" in data:
+                # Verify calculation: amount_before_tax = amount_with_tax / (1 + tax_percentage/100)
+                expected_before_tax = 29250.0 / (1 + 17.0/100)  # Should be 25000.0
+                actual_before_tax = data["amount_before_tax"]
+                
+                if abs(actual_before_tax - expected_before_tax) < 0.01:  # Allow small floating point differences
+                    self.log_test("Income Creation (17% tax)", True, f"Before tax: {actual_before_tax}, With tax: {data['amount_with_tax']}")
+                else:
+                    self.log_test("Income Creation (17% tax)", False, f"Tax calculation error. Expected: {expected_before_tax}, Got: {actual_before_tax}")
+                    return False
             else:
-                self.log_test("Income Creation", False, "Missing income data in response")
+                self.log_test("Income Creation (17% tax)", False, "Missing income data in response")
+                return False
         else:
             error_msg = response.text if response else "No response"
-            self.log_test("Income Creation", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            self.log_test("Income Creation (17% tax)", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            return False
         
-        return False
+        # Test with 15% tax
+        income_data_15 = {
+            "project_id": self.project_id,
+            "amount_with_tax": 23000.0,  # Amount including 15% tax
+            "tax_percentage": 15.0,
+            "description": "دفعة ثانية من العميل"
+        }
+        
+        response = self.make_request("POST", "/incomes", income_data_15)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            expected_before_tax = 23000.0 / (1 + 15.0/100)  # Should be 20000.0
+            actual_before_tax = data["amount_before_tax"]
+            
+            if abs(actual_before_tax - expected_before_tax) < 0.01:
+                self.log_test("Income Creation (15% tax)", True, f"Before tax: {actual_before_tax}, With tax: {data['amount_with_tax']}")
+            else:
+                self.log_test("Income Creation (15% tax)", False, f"Tax calculation error. Expected: {expected_before_tax}, Got: {actual_before_tax}")
+                return False
+        else:
+            error_msg = response.text if response else "No response"
+            self.log_test("Income Creation (15% tax)", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            return False
+        
+        # Test with 0% tax
+        income_data_0 = {
+            "project_id": self.project_id,
+            "amount_with_tax": 10000.0,  # Amount with no tax
+            "tax_percentage": 0.0,
+            "description": "دفعة بدون ضريبة"
+        }
+        
+        response = self.make_request("POST", "/incomes", income_data_0)
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            expected_before_tax = 10000.0 / (1 + 0.0/100)  # Should be 10000.0
+            actual_before_tax = data["amount_before_tax"]
+            
+            if abs(actual_before_tax - expected_before_tax) < 0.01:
+                self.log_test("Income Creation (0% tax)", True, f"Before tax: {actual_before_tax}, With tax: {data['amount_with_tax']}")
+                return True
+            else:
+                self.log_test("Income Creation (0% tax)", False, f"Tax calculation error. Expected: {expected_before_tax}, Got: {actual_before_tax}")
+                return False
+        else:
+            error_msg = response.text if response else "No response"
+            self.log_test("Income Creation (0% tax)", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+            return False
         
     def test_get_incomes(self):
         """Test getting user's incomes"""
