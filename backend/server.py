@@ -285,6 +285,15 @@ async def update_project(project_id: str, project_data: ProjectCreate, current_u
     await db.projects.replace_one({"id": project_id}, updated_project.dict())
     return updated_project
 
+@api_router.delete("/projects/{project_id}")
+async def delete_project(project_id: str, current_user: dict = Depends(get_current_user)):
+    project = await db.projects.find_one({"id": project_id, "user_id": current_user["id"]})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    await db.projects.delete_one({"id": project_id})
+    return {"message": "Project deleted successfully"}
+
 # Worker routes
 @api_router.post("/workers", response_model=Worker)
 async def create_worker(worker_data: WorkerCreate, current_user: dict = Depends(get_current_user)):
