@@ -161,7 +161,8 @@ class WorkDay(BaseModel):
     workers: List[str]  # List of worker IDs
     vehicle_used: Optional[str] = None
     notes: Optional[str] = None
-    date: datetime = Field(default_factory=datetime.utcnow)
+    work_date: str  # Date in YYYY-MM-DD format
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class WorkDayCreate(BaseModel):
     project_id: str
