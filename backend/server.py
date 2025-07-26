@@ -306,6 +306,25 @@ async def get_workers(current_user: dict = Depends(get_current_user)):
     workers = await db.workers.find({"user_id": current_user["id"]}).to_list(1000)
     return [Worker(**worker) for worker in workers]
 
+@api_router.put("/workers/{worker_id}", response_model=Worker)
+async def update_worker(worker_id: str, worker_data: WorkerCreate, current_user: dict = Depends(get_current_user)):
+    worker = await db.workers.find_one({"id": worker_id, "user_id": current_user["id"]})
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+    updated_worker = Worker(**worker_data.dict(), id=worker_id, user_id=current_user["id"])
+    await db.workers.replace_one({"id": worker_id}, updated_worker.dict())
+    return updated_worker
+
+@api_router.delete("/workers/{worker_id}")
+async def delete_worker(worker_id: str, current_user: dict = Depends(get_current_user)):
+    worker = await db.workers.find_one({"id": worker_id, "user_id": current_user["id"]})
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+    
+    await db.workers.delete_one({"id": worker_id})
+    return {"message": "Worker deleted successfully"}
+
 # Expense routes
 @api_router.post("/expenses", response_model=Expense)
 async def create_expense(expense_data: ExpenseCreate, current_user: dict = Depends(get_current_user)):
