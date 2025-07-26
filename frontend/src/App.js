@@ -1743,6 +1743,7 @@ const WorkDayManagement = ({ projects }) => {
   const [workdays, setWorkdays] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingWorkday, setEditingWorkday] = useState(null);
   const [formData, setFormData] = useState({
     project_id: '',
     work_section: '',
@@ -1751,7 +1752,8 @@ const WorkDayManagement = ({ projects }) => {
     work_percentage: 0,
     workers: [],
     vehicle_used: '',
-    notes: ''
+    notes: '',
+    work_date: new Date().toISOString().split('T')[0] // Today's date
   });
   const [selectedProject, setSelectedProject] = useState(null);
 
@@ -1829,23 +1831,64 @@ const WorkDayManagement = ({ projects }) => {
         work_percentage: parseFloat(formData.work_percentage)
       };
 
-      await axios.post(`${API}/workdays`, submitData);
+      if (editingWorkday) {
+        await axios.put(`${API}/workdays/${editingWorkday.id}`, submitData);
+      } else {
+        await axios.post(`${API}/workdays`, submitData);
+      }
+      
       setShowForm(false);
-      setFormData({
-        project_id: '',
-        work_section: '',
-        work_area: '',
-        floor_number: null,
-        work_percentage: 0,
-        workers: [],
-        vehicle_used: '',
-        notes: ''
-      });
-      setSelectedProject(null);
+      setEditingWorkday(null);
+      resetForm();
       fetchWorkdays();
     } catch (error) {
-      console.error('Error creating workday:', error);
+      console.error('Error saving workday:', error);
     }
+  };
+
+  const handleEdit = (workday) => {
+    setEditingWorkday(workday);
+    setFormData({
+      project_id: workday.project_id,
+      work_section: workday.work_section,
+      work_area: workday.work_area,
+      floor_number: workday.floor_number,
+      work_percentage: workday.work_percentage,
+      workers: workday.workers,
+      vehicle_used: workday.vehicle_used || '',
+      notes: workday.notes || '',
+      work_date: workday.work_date
+    });
+    
+    const project = projects.find(p => p.id === workday.project_id);
+    setSelectedProject(project);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (workdayId) => {
+    if (window.confirm('هل أنت متأكد من حذف يوم العمل هذا؟')) {
+      try {
+        await axios.delete(`${API}/workdays/${workdayId}`);
+        fetchWorkdays();
+      } catch (error) {
+        console.error('Error deleting workday:', error);
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      project_id: '',
+      work_section: '',
+      work_area: '',
+      floor_number: null,
+      work_percentage: 0,
+      workers: [],
+      vehicle_used: '',
+      notes: '',
+      work_date: new Date().toISOString().split('T')[0]
+    });
+    setSelectedProject(null);
   };
 
   const handleWorkerChange = (workerId, isChecked) => {
@@ -1870,7 +1913,9 @@ const WorkDayManagement = ({ projects }) => {
 
       {showForm && (
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">إضافة يوم عمل جديد</h3>
+          <h3 className="text-lg font-semibold mb-4">
+            {editingWorkday ? 'تعديل يوم العمل' : 'إضافة يوم عمل جديد'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1886,6 +1931,17 @@ const WorkDayManagement = ({ projects }) => {
                     <option key={project.id} value={project.id}>{project.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">تاريخ العمل</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.work_date}
+                  onChange={(e) => setFormData({...formData, work_date: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                />
               </div>
               
               {selectedProject && (
@@ -1994,7 +2050,11 @@ const WorkDayManagement = ({ projects }) => {
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingWorkday(null);
+                  resetForm();
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 إلغاء
@@ -2003,7 +2063,7 @@ const WorkDayManagement = ({ projects }) => {
                 type="submit"
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
               >
-                حفظ يوم العمل
+                {editingWorkday ? 'تحديث يوم العمل' : 'حفظ يوم العمل'}
               </button>
             </div>
           </form>
@@ -2027,19 +2087,33 @@ const WorkDayManagement = ({ projects }) => {
                     {workday.floor_number && ` (الطبقة ${workday.floor_number})`}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {new Date(workday.date).toLocaleDateString('ar-EG')}
+                    {workday.work_date}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-green-600">
-                    {workday.work_percentage}% مكتمل
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    العمال: {workday.workers.length}
-                  </p>
-                  {workday.vehicle_used && (
-                    <p className="text-sm text-gray-500">السيارة: {workday.vehicle_used}</p>
-                  )}
+                <div className="flex items-center space-x-2">
+                  <div className="text-right mr-4">
+                    <p className="text-sm font-medium text-green-600">
+                      {workday.work_percentage}% مكتمل
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      العمال: {workday.workers.length}
+                    </p>
+                    {workday.vehicle_used && (
+                      <p className="text-sm text-gray-500">السيارة: {workday.vehicle_used}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleEdit(workday)}
+                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                  >
+                    تعديل
+                  </button>
+                  <button
+                    onClick={() => handleDelete(workday.id)}
+                    className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                  >
+                    حذف
+                  </button>
                 </div>
               </div>
               
