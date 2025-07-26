@@ -575,7 +575,9 @@ const ProjectManagement = ({ onProjectsChange }) => {
     name: '',
     type: 'building',
     work_sections: [],
+    work_additions: [],
     floors_count: 1,
+    street_length: 0,
     address: '',
     contact_phone1: '',
     contact_phone2: '',
@@ -584,6 +586,7 @@ const ProjectManagement = ({ onProjectsChange }) => {
     street_config: {}
   });
   const [workSections, setWorkSections] = useState([{ name: '', percentage: 0 }]);
+  const [workAdditions, setWorkAdditions] = useState([{ name: '', percentage: 0 }]);
 
   useEffect(() => {
     fetchProjects();
@@ -614,8 +617,25 @@ const ProjectManagement = ({ onProjectsChange }) => {
     setWorkSections(newSections);
   };
 
+  const addWorkAddition = () => {
+    setWorkAdditions([...workAdditions, { name: '', percentage: 0 }]);
+  };
+
+  const removeWorkAddition = (index) => {
+    const newAdditions = workAdditions.filter((_, i) => i !== index);
+    setWorkAdditions(newAdditions);
+  };
+
+  const updateWorkAddition = (index, field, value) => {
+    const newAdditions = [...workAdditions];
+    newAdditions[index][field] = field === 'percentage' ? parseFloat(value) || 0 : value;
+    setWorkAdditions(newAdditions);
+  };
+
   const getTotalPercentage = () => {
-    return workSections.reduce((total, section) => total + section.percentage, 0);
+    const sectionsTotal = workSections.reduce((total, section) => total + section.percentage, 0);
+    const additionsTotal = workAdditions.reduce((total, addition) => total + addition.percentage, 0);
+    return sectionsTotal + additionsTotal;
   };
 
   const handleSubmit = async (e) => {
@@ -623,35 +643,47 @@ const ProjectManagement = ({ onProjectsChange }) => {
     
     const totalPercentage = getTotalPercentage();
     if (totalPercentage !== 100) {
-      alert('يجب أن يكون إجمالي نسب أقسام العمل 100%');
+      alert('يجب أن يكون إجمالي نسب أقسام العمل والإضافات 100%');
       return;
     }
 
     try {
-      await axios.post(`${API}/projects`, {
+      const submitData = {
         ...formData,
         work_sections: workSections.filter(section => section.name.trim() !== ''),
-        floors_count: parseInt(formData.floors_count),
+        work_additions: workAdditions.filter(addition => addition.name.trim() !== ''),
+        floors_count: formData.type === 'building' ? parseInt(formData.floors_count) : null,
+        street_length: formData.type === 'street' ? parseFloat(formData.street_length) : null,
         total_amount: parseFloat(formData.total_amount)
-      });
+      };
+
+      await axios.post(`${API}/projects`, submitData);
       setShowForm(false);
-      setFormData({
-        name: '',
-        type: 'building',
-        work_sections: [],
-        floors_count: 1,
-        address: '',
-        contact_phone1: '',
-        contact_phone2: '',
-        total_amount: '',
-        building_config: {},
-        street_config: {}
-      });
-      setWorkSections([{ name: '', percentage: 0 }]);
+      resetForm();
       fetchProjects();
     } catch (error) {
       console.error('Error creating project:', error);
+      alert('حدث خطأ أثناء إنشاء المشروع. يرجى المحاولة مرة أخرى.');
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      type: 'building',
+      work_sections: [],
+      work_additions: [],
+      floors_count: 1,
+      street_length: 0,
+      address: '',
+      contact_phone1: '',
+      contact_phone2: '',
+      total_amount: '',
+      building_config: {},
+      street_config: {}
+    });
+    setWorkSections([{ name: '', percentage: 0 }]);
+    setWorkAdditions([{ name: '', percentage: 0 }]);
   };
 
   return (
@@ -692,17 +724,34 @@ const ProjectManagement = ({ onProjectsChange }) => {
                   <option value="street">شارع</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">عدد الطبقات</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={formData.floors_count}
-                  onChange={(e) => setFormData({...formData, floors_count: e.target.value})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              
+              {formData.type === 'building' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">عدد الطبقات</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={formData.floors_count}
+                    onChange={(e) => setFormData({...formData, floors_count: e.target.value})}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">عدد الأمتار</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    required
+                    value={formData.street_length}
+                    onChange={(e) => setFormData({...formData, street_length: e.target.value})}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">العنوان</label>
                 <input
@@ -791,21 +840,70 @@ const ProjectManagement = ({ onProjectsChange }) => {
                   )}
                 </div>
               ))}
-              
-              <div className="text-sm text-gray-600">
-                إجمالي النسب: {getTotalPercentage()}% 
-                {getTotalPercentage() !== 100 && (
-                  <span className="text-red-600 mr-2">
-                    (يجب أن يكون 100%)
-                  </span>
-                )}
+            </div>
+
+            {/* Work Additions */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="text-md font-medium text-gray-900">إضافات العمل (أسوار، طبقات سفلية، أسقف)</h4>
+                <button
+                  type="button"
+                  onClick={addWorkAddition}
+                  className="bg-purple-600 text-white px-3 py-1 rounded-md text-sm hover:bg-purple-700"
+                >
+                  إضافة إضافة
+                </button>
               </div>
+              
+              {workAdditions.map((addition, index) => (
+                <div key={index} className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="اسم الإضافة (مثال: أسوار، طبقات سفلية)"
+                      value={addition.name}
+                      onChange={(e) => updateWorkAddition(index, 'name', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      placeholder="النسبة %"
+                      min="0"
+                      max="100"
+                      value={addition.percentage}
+                      onChange={(e) => updateWorkAddition(index, 'percentage', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeWorkAddition(index)}
+                    className="bg-red-600 text-white px-3 py-2 rounded-md text-sm hover:bg-red-700"
+                  >
+                    حذف
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-sm text-gray-600">
+              إجمالي النسب: {getTotalPercentage()}% 
+              {getTotalPercentage() !== 100 && (
+                <span className="text-red-600 mr-2">
+                  (يجب أن يكون 100%)
+                </span>
+              )}
             </div>
 
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 إلغاء
@@ -841,8 +939,12 @@ const ProjectManagement = ({ onProjectsChange }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
                 <div>
-                  <span className="font-medium text-gray-700">عدد الطبقات:</span>
-                  <span className="text-gray-600 ml-2">{project.floors_count}</span>
+                  <span className="font-medium text-gray-700">
+                    {project.type === 'building' ? 'عدد الطبقات:' : 'عدد الأمتار:'}
+                  </span>
+                  <span className="text-gray-600 ml-2">
+                    {project.type === 'building' ? project.floors_count : project.street_length}
+                  </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">العنوان:</span>
@@ -863,6 +965,21 @@ const ProjectManagement = ({ onProjectsChange }) => {
                       <div key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                         <span className="text-sm text-gray-700">{section.name}</span>
                         <span className="text-sm font-medium text-blue-600">{section.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Work Additions */}
+              {project.work_additions && project.work_additions.length > 0 && (
+                <div className="mb-4">
+                  <h5 className="text-sm font-medium text-gray-700 mb-2">إضافات العمل:</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {project.work_additions.map((addition, index) => (
+                      <div key={index} className="flex justify-between items-center bg-purple-50 p-2 rounded">
+                        <span className="text-sm text-gray-700">{addition.name}</span>
+                        <span className="text-sm font-medium text-purple-600">{addition.percentage}%</span>
                       </div>
                     ))}
                   </div>
