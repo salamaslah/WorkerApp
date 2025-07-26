@@ -375,6 +375,33 @@ async def get_incomes(current_user: dict = Depends(get_current_user)):
     incomes = await db.incomes.find({"user_id": current_user["id"]}).to_list(1000)
     return [Income(**income) for income in incomes]
 
+@api_router.put("/incomes/{income_id}", response_model=Income)
+async def update_income(income_id: str, income_data: IncomeCreate, current_user: dict = Depends(get_current_user)):
+    income = await db.incomes.find_one({"id": income_id, "user_id": current_user["id"]})
+    if not income:
+        raise HTTPException(status_code=404, detail="Income not found")
+    
+    # Calculate amount before tax
+    amount_before_tax = income_data.amount_with_tax / (1 + income_data.tax_percentage / 100)
+    
+    updated_income = Income(
+        **income_data.dict(),
+        id=income_id,
+        user_id=current_user["id"],
+        amount_before_tax=amount_before_tax
+    )
+    await db.incomes.replace_one({"id": income_id}, updated_income.dict())
+    return updated_income
+
+@api_router.delete("/incomes/{income_id}")
+async def delete_income(income_id: str, current_user: dict = Depends(get_current_user)):
+    income = await db.incomes.find_one({"id": income_id, "user_id": current_user["id"]})
+    if not income:
+        raise HTTPException(status_code=404, detail="Income not found")
+    
+    await db.incomes.delete_one({"id": income_id})
+    return {"message": "Income deleted successfully"}
+
 # Work day routes
 @api_router.post("/workdays", response_model=WorkDay)
 async def create_workday(workday_data: WorkDayCreate, current_user: dict = Depends(get_current_user)):
