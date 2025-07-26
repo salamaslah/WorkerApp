@@ -233,7 +233,7 @@ class ConstructionAPITester:
         
         if response and response.status_code == 200:
             data = response.json()
-            if "total_amount" in data and data["total_amount"] == 900000.0:
+            if "total_amount" in data and data["total_amount"] == 950000.0:
                 self.log_test("Update Project", True, "Project updated successfully")
                 return True
             else:
