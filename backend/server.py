@@ -337,6 +337,25 @@ async def get_expenses(current_user: dict = Depends(get_current_user)):
     expenses = await db.expenses.find({"user_id": current_user["id"]}).to_list(1000)
     return [Expense(**expense) for expense in expenses]
 
+@api_router.put("/expenses/{expense_id}", response_model=Expense)
+async def update_expense(expense_id: str, expense_data: ExpenseCreate, current_user: dict = Depends(get_current_user)):
+    expense = await db.expenses.find_one({"id": expense_id, "user_id": current_user["id"]})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    updated_expense = Expense(**expense_data.dict(), id=expense_id, user_id=current_user["id"])
+    await db.expenses.replace_one({"id": expense_id}, updated_expense.dict())
+    return updated_expense
+
+@api_router.delete("/expenses/{expense_id}")
+async def delete_expense(expense_id: str, current_user: dict = Depends(get_current_user)):
+    expense = await db.expenses.find_one({"id": expense_id, "user_id": current_user["id"]})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    await db.expenses.delete_one({"id": expense_id})
+    return {"message": "Expense deleted successfully"}
+
 # Income routes
 @api_router.post("/incomes", response_model=Income)
 async def create_income(income_data: IncomeCreate, current_user: dict = Depends(get_current_user)):
