@@ -405,7 +405,14 @@ async def delete_income(income_id: str, current_user: dict = Depends(get_current
 # Work day routes
 @api_router.post("/workdays", response_model=WorkDay)
 async def create_workday(workday_data: WorkDayCreate, current_user: dict = Depends(get_current_user)):
-    workday = WorkDay(**workday_data.dict(), user_id=current_user["id"])
+    # Set work_date to today if not provided
+    work_date = workday_data.work_date if workday_data.work_date else datetime.utcnow().strftime("%Y-%m-%d")
+    
+    workday = WorkDay(
+        **workday_data.dict(exclude={"work_date"}),
+        user_id=current_user["id"],
+        work_date=work_date
+    )
     await db.workdays.insert_one(workday.dict())
     return workday
 
@@ -413,6 +420,38 @@ async def create_workday(workday_data: WorkDayCreate, current_user: dict = Depen
 async def get_workdays(current_user: dict = Depends(get_current_user)):
     workdays = await db.workdays.find({"user_id": current_user["id"]}).to_list(1000)
     return [WorkDay(**workday) for workday in workdays]
+
+@api_router.get("/workdays/project/{project_id}", response_model=List[WorkDay])
+async def get_workdays_by_project(project_id: str, current_user: dict = Depends(get_current_user)):
+    workdays = await db.workdays.find({"user_id": current_user["id"], "project_id": project_id}).to_list(1000)
+    return [WorkDay(**workday) for workday in workdays]
+
+@api_router.put("/workdays/{workday_id}", response_model=WorkDay)
+async def update_workday(workday_id: str, workday_data: WorkDayCreate, current_user: dict = Depends(get_current_user)):
+    workday = await db.workdays.find_one({"id": workday_id, "user_id": current_user["id"]})
+    if not workday:
+        raise HTTPException(status_code=404, detail="Workday not found")
+    
+    # Set work_date to today if not provided
+    work_date = workday_data.work_date if workday_data.work_date else datetime.utcnow().strftime("%Y-%m-%d")
+    
+    updated_workday = WorkDay(
+        **workday_data.dict(exclude={"work_date"}),
+        id=workday_id,
+        user_id=current_user["id"],
+        work_date=work_date
+    )
+    await db.workdays.replace_one({"id": workday_id}, updated_workday.dict())
+    return updated_workday
+
+@api_router.delete("/workdays/{workday_id}")
+async def delete_workday(workday_id: str, current_user: dict = Depends(get_current_user)):
+    workday = await db.workdays.find_one({"id": workday_id, "user_id": current_user["id"]})
+    if not workday:
+        raise HTTPException(status_code=404, detail="Workday not found")
+    
+    await db.workdays.delete_one({"id": workday_id})
+    return {"message": "Workday deleted successfully"}
 
 # Reports routes
 @api_router.get("/reports/financial")
