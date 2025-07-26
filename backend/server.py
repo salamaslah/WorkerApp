@@ -310,7 +310,14 @@ async def get_expenses(current_user: dict = Depends(get_current_user)):
 # Income routes
 @api_router.post("/incomes", response_model=Income)
 async def create_income(income_data: IncomeCreate, current_user: dict = Depends(get_current_user)):
-    income = Income(**income_data.dict(), user_id=current_user["id"])
+    # Calculate amount before tax
+    amount_before_tax = income_data.amount_with_tax / (1 + income_data.tax_percentage / 100)
+    
+    income = Income(
+        **income_data.dict(),
+        user_id=current_user["id"],
+        amount_before_tax=amount_before_tax
+    )
     await db.incomes.insert_one(income.dict())
     return income
 
