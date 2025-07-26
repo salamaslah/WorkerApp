@@ -65,13 +65,19 @@ class WorkSection(BaseModel):
     name: str
     percentage: float  # Percentage of total work this section represents
 
+class WorkAddition(BaseModel):
+    name: str  # e.g., "أسوار", "طبقات سفلية", "أسقف"
+    percentage: float  # Percentage of total work this addition represents
+
 class Project(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     name: str
     type: str  # "building" or "street"
     work_sections: List[WorkSection] = []  # Sections of work with percentages
-    floors_count: int  # Number of floors
+    work_additions: List[WorkAddition] = []  # Additional work items (walls, underground floors, roofs)
+    floors_count: Optional[int] = None  # Number of floors for buildings
+    street_length: Optional[float] = None  # Length in meters for streets
     address: str
     contact_phone1: str
     contact_phone2: Optional[str] = None
@@ -86,7 +92,9 @@ class ProjectCreate(BaseModel):
     name: str
     type: str
     work_sections: List[WorkSection] = []
-    floors_count: int
+    work_additions: List[WorkAddition] = []
+    floors_count: Optional[int] = None
+    street_length: Optional[float] = None
     address: str
     contact_phone1: str
     contact_phone2: Optional[str] = None
