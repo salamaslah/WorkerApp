@@ -155,7 +155,8 @@ class WorkDay(BaseModel):
     user_id: str
     project_id: str
     work_section: str  # Section name that was worked on
-    floor_number: int  # Floor number worked on
+    work_area: str  # Specific area worked on (e.g., "الطابق الثاني - الغرفة الرئيسية")
+    floor_number: Optional[int] = None  # Floor number worked on (for buildings)
     work_percentage: float  # Percentage of work completed in this section
     workers: List[str]  # List of worker IDs
     vehicle_used: Optional[str] = None
@@ -165,7 +166,8 @@ class WorkDay(BaseModel):
 class WorkDayCreate(BaseModel):
     project_id: str
     work_section: str
-    floor_number: int
+    work_area: str
+    floor_number: Optional[int] = None
     work_percentage: float
     workers: List[str]
     vehicle_used: Optional[str] = None
