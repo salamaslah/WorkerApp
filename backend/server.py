@@ -138,13 +138,16 @@ class Income(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     project_id: str
-    amount_before_tax: float
+    amount_with_tax: float  # Amount including tax
+    tax_percentage: float  # Tax percentage (e.g., 17 for 17%)
+    amount_before_tax: float  # Calculated amount before tax
     description: Optional[str] = None
     date: datetime = Field(default_factory=datetime.utcnow)
 
 class IncomeCreate(BaseModel):
     project_id: str
-    amount_before_tax: float
+    amount_with_tax: float  # Amount including tax
+    tax_percentage: float  # Tax percentage
     description: Optional[str] = None
 
 class WorkDay(BaseModel):
