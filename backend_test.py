@@ -63,13 +63,17 @@ class ConstructionAPITester:
         """Test user registration endpoint"""
         print("\n=== Testing User Registration ===")
         
+        # Use timestamp to ensure unique username
+        import time
+        timestamp = str(int(time.time()))
+        
         user_data = {
             "full_name": "أحمد محمد البناء",
             "phone_number": "+972-50-123-4567",
-            "email": "ahmed.construction@example.com",
+            "email": f"ahmed.construction.{timestamp}@example.com",
             "company_name": "شركة البناء المتقدم",
             "company_number": "123456789",
-            "username": "ahmed_builder",
+            "username": f"ahmed_builder_{timestamp}",
             "password": "SecurePass123!"
         }
         
