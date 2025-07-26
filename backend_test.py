@@ -456,6 +456,76 @@ class ConstructionAPITester:
         
         return False
         
+    def test_financial_report_with_filters(self):
+        """Test financial reporting with period and project filters"""
+        print("\n=== Testing Financial Report with Filters ===")
+        
+        # Test monthly filter
+        response = self.make_request("GET", "/reports/financial?period=monthly")
+        if response and response.status_code == 200:
+            data = response.json()
+            if "period" in data and data["period"] == "monthly":
+                self.log_test("Financial Report (Monthly)", True, f"Monthly profit: {data.get('profit', 0)}")
+            else:
+                self.log_test("Financial Report (Monthly)", False, "Period filter not working")
+        else:
+            self.log_test("Financial Report (Monthly)", False, f"Status: {response.status_code if response else 'None'}")
+        
+        # Test yearly filter
+        response = self.make_request("GET", "/reports/financial?period=yearly")
+        if response and response.status_code == 200:
+            data = response.json()
+            if "period" in data and data["period"] == "yearly":
+                self.log_test("Financial Report (Yearly)", True, f"Yearly profit: {data.get('profit', 0)}")
+            else:
+                self.log_test("Financial Report (Yearly)", False, "Period filter not working")
+        else:
+            self.log_test("Financial Report (Yearly)", False, f"Status: {response.status_code if response else 'None'}")
+        
+        # Test project filter
+        if self.project_id:
+            response = self.make_request("GET", f"/reports/financial?project_id={self.project_id}")
+            if response and response.status_code == 200:
+                data = response.json()
+                if "project_id" in data and data["project_id"] == self.project_id:
+                    self.log_test("Financial Report (Project Filter)", True, f"Project profit: {data.get('profit', 0)}")
+                else:
+                    self.log_test("Financial Report (Project Filter)", False, "Project filter not working")
+            else:
+                self.log_test("Financial Report (Project Filter)", False, f"Status: {response.status_code if response else 'None'}")
+        
+        return True
+        
+    def test_projects_financial_summary(self):
+        """Test projects financial summary endpoint"""
+        print("\n=== Testing Projects Financial Summary ===")
+        
+        response = self.make_request("GET", "/reports/projects")
+        
+        if response and response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list):
+                if len(data) > 0:
+                    project = data[0]
+                    required_fields = ["project_id", "project_name", "total_amount", "total_expenses", 
+                                     "total_incomes", "worker_payments", "profit", "progress_percentage", "status"]
+                    if all(field in project for field in required_fields):
+                        self.log_test("Projects Financial Summary", True, f"Retrieved {len(data)} project summaries")
+                        return True
+                    else:
+                        missing = [f for f in required_fields if f not in project]
+                        self.log_test("Projects Financial Summary", False, f"Missing fields: {missing}")
+                else:
+                    self.log_test("Projects Financial Summary", True, "No projects found (empty list)")
+                    return True
+            else:
+                self.log_test("Projects Financial Summary", False, "Response is not a list")
+        else:
+            error_msg = response.text if response else "No response"
+            self.log_test("Projects Financial Summary", False, f"Status: {response.status_code if response else 'None'}, Error: {error_msg}")
+        
+        return False
+        
     def test_jwt_authentication(self):
         """Test JWT token validation"""
         print("\n=== Testing JWT Authentication ===")
