@@ -1543,7 +1543,8 @@ const WorkDayManagement = ({ projects }) => {
   const [formData, setFormData] = useState({
     project_id: '',
     work_section: '',
-    floor_number: 1,
+    work_area: '',
+    floor_number: null,
     work_percentage: 0,
     workers: [],
     vehicle_used: '',
@@ -1575,24 +1576,63 @@ const WorkDayManagement = ({ projects }) => {
   };
 
   const handleProjectChange = (projectId) => {
-    setFormData({...formData, project_id: projectId, work_section: '', floor_number: 1});
+    setFormData({
+      ...formData, 
+      project_id: projectId, 
+      work_section: '', 
+      work_area: '',
+      floor_number: null
+    });
     const project = projects.find(p => p.id === projectId);
     setSelectedProject(project);
+  };
+
+  const getAllWorkItems = () => {
+    if (!selectedProject) return [];
+    
+    const workItems = [];
+    
+    // Add work sections
+    if (selectedProject.work_sections) {
+      selectedProject.work_sections.forEach(section => {
+        workItems.push({
+          name: section.name,
+          type: 'section',
+          percentage: section.percentage
+        });
+      });
+    }
+    
+    // Add work additions
+    if (selectedProject.work_additions) {
+      selectedProject.work_additions.forEach(addition => {
+        workItems.push({
+          name: addition.name,
+          type: 'addition',
+          percentage: addition.percentage
+        });
+      });
+    }
+    
+    return workItems;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/workdays`, {
+      const submitData = {
         ...formData,
-        floor_number: parseInt(formData.floor_number),
+        floor_number: selectedProject?.type === 'building' ? parseInt(formData.floor_number) : null,
         work_percentage: parseFloat(formData.work_percentage)
-      });
+      };
+
+      await axios.post(`${API}/workdays`, submitData);
       setShowForm(false);
       setFormData({
         project_id: '',
         work_section: '',
-        floor_number: 1,
+        work_area: '',
+        floor_number: null,
         work_percentage: 0,
         workers: [],
         vehicle_used: '',
@@ -1655,26 +1695,43 @@ const WorkDayManagement = ({ projects }) => {
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                   >
                     <option value="">اختر قسم العمل</option>
-                    {selectedProject.work_sections?.map((section, index) => (
-                      <option key={index} value={section.name}>{section.name}</option>
+                    {getAllWorkItems().map((item, index) => (
+                      <option key={index} value={item.name}>
+                        {item.name} ({item.type === 'section' ? 'قسم' : 'إضافة'})
+                      </option>
                     ))}
                   </select>
                 </div>
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">رقم الطبقة</label>
-                <select
+                <label className="block text-sm font-medium text-gray-700">اسم المنطقة المعمول بها</label>
+                <input
+                  type="text"
                   required
-                  value={formData.floor_number}
-                  onChange={(e) => setFormData({...formData, floor_number: e.target.value})}
+                  value={formData.work_area}
+                  onChange={(e) => setFormData({...formData, work_area: e.target.value})}
+                  placeholder="مثال: الغرفة الرئيسية، الحمام الأول، الشرفة الأمامية"
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                >
-                  {selectedProject && Array.from({length: selectedProject.floors_count}, (_, i) => i + 1).map(floor => (
-                    <option key={floor} value={floor}>الطبقة {floor}</option>
-                  ))}
-                </select>
+                />
               </div>
+              
+              {selectedProject?.type === 'building' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">رقم الطبقة</label>
+                  <select
+                    required
+                    value={formData.floor_number || ''}
+                    onChange={(e) => setFormData({...formData, floor_number: e.target.value})}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  >
+                    <option value="">اختر الطبقة</option>
+                    {Array.from({length: selectedProject.floors_count}, (_, i) => i + 1).map(floor => (
+                      <option key={floor} value={floor}>الطبقة {floor}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700">نسبة العمل المنجزة في هذا القسم (%)</label>
@@ -1700,7 +1757,7 @@ const WorkDayManagement = ({ projects }) => {
                 />
               </div>
               
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700">الملاحظات (اختياري)</label>
                 <textarea
                   value={formData.notes}
@@ -1762,7 +1819,10 @@ const WorkDayManagement = ({ projects }) => {
                   <h4 className="text-lg font-medium text-gray-900">
                     {projects.find(p => p.id === workday.project_id)?.name || 'مشروع محذوف'}
                   </h4>
-                  <p className="text-sm text-gray-600">{workday.work_section} - الطبقة {workday.floor_number}</p>
+                  <p className="text-sm text-gray-600">
+                    {workday.work_section} - {workday.work_area}
+                    {workday.floor_number && ` (الطبقة ${workday.floor_number})`}
+                  </p>
                   <p className="text-sm text-gray-500 mt-1">
                     {new Date(workday.date).toLocaleDateString('ar-EG')}
                   </p>
