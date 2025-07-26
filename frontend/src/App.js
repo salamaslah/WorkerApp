@@ -1380,22 +1380,23 @@ const IncomeManagement = () => {
 };
 
 // Work Day Management Component
-const WorkDayManagement = () => {
+const WorkDayManagement = ({ projects }) => {
   const [workdays, setWorkdays] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     project_id: '',
-    section_worked: '',
+    work_section: '',
+    floor_number: 1,
+    work_percentage: 0,
     workers: [],
     vehicle_used: '',
     notes: ''
   });
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     fetchWorkdays();
-    fetchProjects();
     fetchWorkers();
   }, []);
 
@@ -1408,15 +1409,6 @@ const WorkDayManagement = () => {
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      const response = await axios.get(`${API}/projects`);
-      setProjects(response.data);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    }
-  };
-
   const fetchWorkers = async () => {
     try {
       const response = await axios.get(`${API}/workers`);
@@ -1426,18 +1418,31 @@ const WorkDayManagement = () => {
     }
   };
 
+  const handleProjectChange = (projectId) => {
+    setFormData({...formData, project_id: projectId, work_section: '', floor_number: 1});
+    const project = projects.find(p => p.id === projectId);
+    setSelectedProject(project);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/workdays`, formData);
+      await axios.post(`${API}/workdays`, {
+        ...formData,
+        floor_number: parseInt(formData.floor_number),
+        work_percentage: parseFloat(formData.work_percentage)
+      });
       setShowForm(false);
       setFormData({
         project_id: '',
-        section_worked: '',
+        work_section: '',
+        floor_number: 1,
+        work_percentage: 0,
         workers: [],
         vehicle_used: '',
         notes: ''
       });
+      setSelectedProject(null);
       fetchWorkdays();
     } catch (error) {
       console.error('Error creating workday:', error);
@@ -1474,7 +1479,7 @@ const WorkDayManagement = () => {
                 <select
                   required
                   value={formData.project_id}
-                  onChange={(e) => setFormData({...formData, project_id: e.target.value})}
+                  onChange={(e) => handleProjectChange(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                 >
                   <option value="">اختر المشروع</option>
@@ -1483,17 +1488,52 @@ const WorkDayManagement = () => {
                   ))}
                 </select>
               </div>
+              
+              {selectedProject && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">قسم العمل</label>
+                  <select
+                    required
+                    value={formData.work_section}
+                    onChange={(e) => setFormData({...formData, work_section: e.target.value})}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  >
+                    <option value="">اختر قسم العمل</option>
+                    {selectedProject.work_sections?.map((section, index) => (
+                      <option key={index} value={section.name}>{section.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700">القسم المعمول به</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700">رقم الطبقة</label>
+                <select
                   required
-                  value={formData.section_worked}
-                  onChange={(e) => setFormData({...formData, section_worked: e.target.value})}
+                  value={formData.floor_number}
+                  onChange={(e) => setFormData({...formData, floor_number: e.target.value})}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                  placeholder="مثال: الطابق الأول - الغرفة الرئيسية"
+                >
+                  {selectedProject && Array.from({length: selectedProject.floors_count}, (_, i) => i + 1).map(floor => (
+                    <option key={floor} value={floor}>الطبقة {floor}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">نسبة العمل المنجزة في هذا القسم (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  required
+                  value={formData.work_percentage}
+                  onChange={(e) => setFormData({...formData, work_percentage: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">السيارة المستخدمة (اختياري)</label>
                 <input
@@ -1503,6 +1543,7 @@ const WorkDayManagement = () => {
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700">الملاحظات (اختياري)</label>
                 <textarea
@@ -1565,13 +1606,16 @@ const WorkDayManagement = () => {
                   <h4 className="text-lg font-medium text-gray-900">
                     {projects.find(p => p.id === workday.project_id)?.name || 'مشروع محذوف'}
                   </h4>
-                  <p className="text-sm text-gray-600">{workday.section_worked}</p>
+                  <p className="text-sm text-gray-600">{workday.work_section} - الطبقة {workday.floor_number}</p>
                   <p className="text-sm text-gray-500 mt-1">
                     {new Date(workday.date).toLocaleDateString('ar-EG')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-green-600">
+                    {workday.work_percentage}% مكتمل
+                  </p>
+                  <p className="text-sm text-gray-500">
                     العمال: {workday.workers.length}
                   </p>
                   {workday.vehicle_used && (
