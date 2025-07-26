@@ -1347,7 +1347,8 @@ const IncomeManagement = () => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     project_id: '',
-    amount_before_tax: '',
+    amount_with_tax: '',
+    tax_percentage: 17,
     description: ''
   });
 
@@ -1374,17 +1375,25 @@ const IncomeManagement = () => {
     }
   };
 
+  const calculateAmountBeforeTax = () => {
+    const amountWithTax = parseFloat(formData.amount_with_tax) || 0;
+    const taxPercentage = parseFloat(formData.tax_percentage) || 0;
+    return amountWithTax / (1 + taxPercentage / 100);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`${API}/incomes`, {
         ...formData,
-        amount_before_tax: parseFloat(formData.amount_before_tax)
+        amount_with_tax: parseFloat(formData.amount_with_tax),
+        tax_percentage: parseFloat(formData.tax_percentage)
       });
       setShowForm(false);
       setFormData({
         project_id: '',
-        amount_before_tax: '',
+        amount_with_tax: '',
+        tax_percentage: 17,
         description: ''
       });
       fetchIncomes();
@@ -1425,14 +1434,37 @@ const IncomeManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">المبلغ قبل الضريبة</label>
+                <label className="block text-sm font-medium text-gray-700">المبلغ شامل الضريبة</label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  value={formData.amount_before_tax}
-                  onChange={(e) => setFormData({...formData, amount_before_tax: e.target.value})}
+                  value={formData.amount_with_tax}
+                  onChange={(e) => setFormData({...formData, amount_with_tax: e.target.value})}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">نسبة الضريبة المضافة (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  required
+                  value={formData.tax_percentage}
+                  onChange={(e) => setFormData({...formData, tax_percentage: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">المبلغ دون الضريبة (محسوب تلقائياً)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={calculateAmountBeforeTax().toFixed(2)}
+                  readOnly
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500 sm:text-sm"
                 />
               </div>
               <div className="md:col-span-2">
@@ -1484,8 +1516,15 @@ const IncomeManagement = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-medium text-green-600">₪{income.amount_before_tax.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">قبل الضريبة</p>
+                  <p className="text-lg font-medium text-green-600">
+                    ₪{income.amount_with_tax?.toLocaleString()} شامل الضريبة
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    ₪{income.amount_before_tax?.toLocaleString()} دون الضريبة
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    ضريبة {income.tax_percentage}%
+                  </p>
                 </div>
               </div>
             </div>
