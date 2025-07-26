@@ -405,8 +405,8 @@ class ConstructionAPITester:
         
         if response and response.status_code == 200:
             data = response.json()
-            if "id" in data and "section_worked" in data:
-                self.log_test("Workday Creation", True, f"Section: {data['section_worked']}")
+            if "id" in data and "work_section" in data and "floor_number" in data:
+                self.log_test("Workday Creation", True, f"Section: {data['work_section']}, Floor: {data['floor_number']}")
                 return True
             else:
                 self.log_test("Workday Creation", False, "Missing workday data in response")
