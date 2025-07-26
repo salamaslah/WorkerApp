@@ -384,7 +384,7 @@ class ConstructionAPITester:
         return False
         
     def test_create_workday(self):
-        """Test workday creation endpoint"""
+        """Test workday creation endpoint with new structure"""
         print("\n=== Testing Workday Creation ===")
         
         if not self.project_id or not self.worker_id:
@@ -393,10 +393,12 @@ class ConstructionAPITester:
             
         workday_data = {
             "project_id": self.project_id,
-            "section_worked": "الطابق الأول - بناء الجدران الخارجية",
+            "work_section": "بناء الجدران",
+            "floor_number": 2,
+            "work_percentage": 25.0,
             "workers": [self.worker_id],
             "vehicle_used": "شاحنة صغيرة",
-            "notes": "تم إنجاز 60% من أعمال الجدران الخارجية للطابق الأول"
+            "notes": "تم إنجاز 25% من أعمال بناء الجدران في الطابق الثاني"
         }
         
         response = self.make_request("POST", "/workdays", workday_data)
