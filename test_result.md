@@ -294,15 +294,20 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Dashboard with project overview"
     - "Project management interface"
-    - "Worker management interface"
-  stuck_tasks: []
+    - "Financial management interface" 
+    - "Work day management interface"
+  stuck_tasks:
+    - "Project management interface"
+    - "Financial management interface"
+    - "Work day management interface"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
     message: "Created complete construction management application with authentication, project management, worker management, financial tracking, and work day tracking. All backend and frontend features implemented. Ready for testing."
   - agent: "testing"
     message: "✅ BACKEND TESTING COMPLETE - All backend functionality working excellently! Comprehensive testing performed on all 6 backend tasks. Success rate: 95.8% (23/24 tests passed). Only minor issue: JWT error handling fixed. All core functionality including authentication, project management (building/street), worker management, financial tracking with tax calculations, work day tracking, and financial reporting working perfectly. Backend API is production-ready. Fixed minor JWT exception handling issue during testing."
+  - agent: "testing"
+    message: "🔍 COMPREHENSIVE ADD BUTTONS TESTING COMPLETED - Tested all 5 add buttons across all pages systematically. RESULTS: ✅ WORKING (2/5): Workers management (100% functional), Authentication & Dashboard (100% functional). ❌ FAILING (3/5): Projects (navigation selector issue), Expenses (dropdown selection timeout), Incomes (form submission validation), Work Days (input field accessibility). Overall success rate: 60% (9/15 tests passed). Issues identified: 1) Selector ambiguity for navigation, 2) Form field accessibility problems, 3) Dropdown option loading issues, 4) Form validation/submission feedback. All add buttons found and forms open correctly, but specific field interactions and submissions need fixes."
