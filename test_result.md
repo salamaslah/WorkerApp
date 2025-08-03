@@ -276,9 +276,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Authentication system (register, login, JWT)"
-    - "Project management API endpoints"
     - "Dashboard with project overview"
+    - "Project management interface"
+    - "Worker management interface"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
