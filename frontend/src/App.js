@@ -651,29 +651,93 @@ const ProjectManagement = ({ onProjectsChange }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('Form submission started');
+    console.log('Form data:', formData);
+    console.log('Work sections:', workSections);
+    console.log('Work additions:', workAdditions);
+    
     const totalPercentage = getTotalPercentage();
-    if (totalPercentage !== 100) {
-      alert('يجب أن يكون إجمالي نسب أقسام العمل والإضافات 100%');
+    console.log('Total percentage:', totalPercentage);
+    
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      alert(`يجب أن يكون إجمالي نسب أقسام العمل والإضافات 100%. النسبة الحالية: ${totalPercentage}%`);
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert('اسم المشروع مطلوب');
+      return;
+    }
+    
+    if (!formData.address.trim()) {
+      alert('العنوان مطلوب');
+      return;
+    }
+    
+    if (!formData.contact_phone1.trim()) {
+      alert('رقم الهاتف الأول مطلوب');
+      return;
+    }
+    
+    if (!formData.total_amount || parseFloat(formData.total_amount) <= 0) {
+      alert('المبلغ الإجمالي مطلوب ويجب أن يكون أكبر من صفر');
+      return;
+    }
+    
+    if (formData.type === 'building' && (!formData.floors_count || parseInt(formData.floors_count) < 1)) {
+      alert('عدد الطبقات مطلوب للمباني ويجب أن يكون أكبر من صفر');
+      return;
+    }
+    
+    if (formData.type === 'street' && (!formData.street_length || parseFloat(formData.street_length) <= 0)) {
+      alert('عدد الأمتار مطلوب للشوارع ويجب أن يكون أكبر من صفر');
       return;
     }
 
     try {
+      console.log('Preparing submit data...');
+      
+      const filteredWorkSections = workSections.filter(section => section.name.trim() !== '');
+      const filteredWorkAdditions = workAdditions.filter(addition => addition.name.trim() !== '');
+      
+      if (filteredWorkSections.length === 0 && filteredWorkAdditions.length === 0) {
+        alert('يجب إضافة قسم عمل واحد على الأقل');
+        return;
+      }
+      
       const submitData = {
-        ...formData,
-        work_sections: workSections.filter(section => section.name.trim() !== ''),
-        work_additions: workAdditions.filter(addition => addition.name.trim() !== ''),
+        name: formData.name.trim(),
+        type: formData.type,
+        work_sections: filteredWorkSections,
+        work_additions: filteredWorkAdditions,
         floors_count: formData.type === 'building' ? parseInt(formData.floors_count) : null,
         street_length: formData.type === 'street' ? parseFloat(formData.street_length) : null,
-        total_amount: parseFloat(formData.total_amount)
+        address: formData.address.trim(),
+        contact_phone1: formData.contact_phone1.trim(),
+        contact_phone2: formData.contact_phone2 ? formData.contact_phone2.trim() : null,
+        total_amount: parseFloat(formData.total_amount),
+        building_config: {},
+        street_config: {}
       };
 
-      await axios.post(`${API}/projects`, submitData);
+      console.log('Submit data:', submitData);
+      
+      const response = await axios.post(`${API}/projects`, submitData);
+      console.log('Project created successfully:', response.data);
+      
+      alert('تم حفظ المشروع بنجاح!');
       setShowForm(false);
       resetForm();
       fetchProjects();
     } catch (error) {
       console.error('Error creating project:', error);
-      alert('حدث خطأ أثناء إنشاء المشروع. يرجى المحاولة مرة أخرى.');
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(`حدث خطأ أثناء إنشاء المشروع: ${error.response.data.detail || 'خطأ غير معروف'}`);
+      } else {
+        alert('حدث خطأ أثناء إنشاء المشروع. يرجى المحاولة مرة أخرى.');
+      }
     }
   };
 
