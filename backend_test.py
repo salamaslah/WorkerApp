@@ -98,8 +98,12 @@ class ConstructionAPITester:
         """Test user login endpoint"""
         print("\n=== Testing User Login ===")
         
+        # Use the same timestamp-based username from registration
+        import time
+        timestamp = str(int(time.time()))
+        
         login_data = {
-            "username_or_email": "ahmed_builder",
+            "username_or_email": f"ahmed_builder_{timestamp}",
             "password": "SecurePass123!"
         }
         
