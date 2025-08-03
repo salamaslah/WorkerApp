@@ -2115,6 +2115,8 @@ const WorkDayManagement = ({ projects }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">نسبة العمل المنجزة في هذا القسم (%)</label>
                 <input
+                  id="work-percentage-input"
+                  name="work_percentage"
                   type="number"
                   min="0"
                   max="100"
@@ -2123,6 +2125,7 @@ const WorkDayManagement = ({ projects }) => {
                   value={formData.work_percentage}
                   onChange={(e) => setFormData({...formData, work_percentage: e.target.value})}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                  placeholder="أدخل النسبة (مثال: 25.5)"
                 />
               </div>
               
