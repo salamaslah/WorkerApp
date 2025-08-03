@@ -1480,12 +1480,39 @@ const IncomeManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Income form submission started');
+    console.log('Form data:', formData);
+    
+    // Validate required fields
+    if (!formData.project_id) {
+      alert('المشروع مطلوب');
+      return;
+    }
+    
+    if (!formData.amount_with_tax || parseFloat(formData.amount_with_tax) <= 0) {
+      alert('المبلغ شامل الضريبة مطلوب ويجب أن يكون أكبر من صفر');
+      return;
+    }
+    
+    if (!formData.tax_percentage || parseFloat(formData.tax_percentage) < 0 || parseFloat(formData.tax_percentage) > 100) {
+      alert('نسبة الضريبة يجب أن تكون بين 0 و 100');
+      return;
+    }
+    
     try {
-      await axios.post(`${API}/incomes`, {
-        ...formData,
+      const submitData = {
+        project_id: formData.project_id,
         amount_with_tax: parseFloat(formData.amount_with_tax),
-        tax_percentage: parseFloat(formData.tax_percentage)
-      });
+        tax_percentage: parseFloat(formData.tax_percentage),
+        description: formData.description.trim() || null
+      };
+      
+      console.log('Submitting income data:', submitData);
+      
+      const response = await axios.post(`${API}/incomes`, submitData);
+      console.log('Income created successfully:', response.data);
+      
+      alert('تم حفظ المدخول بنجاح!');
       setShowForm(false);
       setFormData({
         project_id: '',
@@ -1496,6 +1523,12 @@ const IncomeManagement = () => {
       fetchIncomes();
     } catch (error) {
       console.error('Error creating income:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(`حدث خطأ أثناء إنشاء المدخول: ${error.response.data.detail || 'خطأ غير معروف'}`);
+      } else {
+        alert('حدث خطأ أثناء إنشاء المدخول. يرجى المحاولة مرة أخرى.');
+      }
     }
   };
 
