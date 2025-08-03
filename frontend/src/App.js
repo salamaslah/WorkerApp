@@ -1266,12 +1266,29 @@ const ExpenseManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Expense form submission started');
+    console.log('Form data:', formData);
+    
+    // Validate required fields
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      alert('المبلغ مطلوب ويجب أن يكون أكبر من صفر');
+      return;
+    }
+    
     try {
-      await axios.post(`${API}/expenses`, {
-        ...formData,
+      const submitData = {
+        project_id: formData.project_id || null,
+        type: formData.type,
         amount: parseFloat(formData.amount),
-        project_id: formData.project_id || null
-      });
+        description: formData.description.trim() || null
+      };
+      
+      console.log('Submitting expense data:', submitData);
+      
+      const response = await axios.post(`${API}/expenses`, submitData);
+      console.log('Expense created successfully:', response.data);
+      
+      alert('تم حفظ المصروف بنجاح!');
       setShowForm(false);
       setFormData({
         project_id: '',
@@ -1282,6 +1299,12 @@ const ExpenseManagement = () => {
       fetchExpenses();
     } catch (error) {
       console.error('Error creating expense:', error);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(`حدث خطأ أثناء إنشاء المصروف: ${error.response.data.detail || 'خطأ غير معروف'}`);
+      } else {
+        alert('حدث خطأ أثناء إنشاء المصروف. يرجى المحاولة مرة أخرى.');
+      }
     }
   };
 
